@@ -155,16 +155,27 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("theme", newTheme);
     });
 
+    // Welcome Screen & Main App Elements
+    const welcomeScreen = document.getElementById("welcome-screen");
+    const mainAppWrapper = document.getElementById("main-app-wrapper");
+
+    const landingTabLoginBtn = document.getElementById("landing-tab-login-btn");
+    const landingTabRegisterBtn = document.getElementById("landing-tab-register-btn");
+    const landingLoginForm = document.getElementById("landing-login-form");
+    const landingRegisterForm = document.getElementById("landing-register-form");
+
     // --- Auth UI Management ---
     function updateAuthUI() {
         if (currentUser) {
-            openAuthBtn.style.display = "none";
-            authUserBadge.style.display = "flex";
-            authUserName.textContent = `👤 ${currentUser.name}`;
+            if (welcomeScreen) welcomeScreen.style.display = "none";
+            if (mainAppWrapper) mainAppWrapper.style.display = "block";
+            if (authUserBadge) authUserBadge.style.display = "flex";
+            if (authUserName) authUserName.textContent = `👤 ${currentUser.name}`;
             if (userSelect) userSelect.value = currentUser.id;
         } else {
-            openAuthBtn.style.display = "inline-block";
-            authUserBadge.style.display = "none";
+            if (welcomeScreen) welcomeScreen.style.display = "block";
+            if (mainAppWrapper) mainAppWrapper.style.display = "none";
+            if (authUserBadge) authUserBadge.style.display = "none";
         }
     }
 
@@ -178,6 +189,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (response.ok) {
                 currentUser = await response.json();
                 updateAuthUI();
+                fetchDishes();
+                fetchUsers();
+                fetchOrders();
                 fetchUserStats();
             } else {
                 token = null;
@@ -208,6 +222,102 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.removeItem("foody_token");
             updateAuthUI();
             showToast("Вы вышли из профиля 🚪");
+        });
+    }
+
+    if (landingTabLoginBtn && landingTabRegisterBtn) {
+        landingTabLoginBtn.addEventListener("click", () => {
+            landingTabLoginBtn.classList.add("active");
+            landingTabRegisterBtn.classList.remove("active");
+            landingLoginForm.style.display = "block";
+            landingRegisterForm.style.display = "none";
+        });
+
+        landingTabRegisterBtn.addEventListener("click", () => {
+            landingTabRegisterBtn.classList.add("active");
+            landingTabLoginBtn.classList.remove("active");
+            landingLoginForm.style.display = "none";
+            landingRegisterForm.style.display = "block";
+        });
+    }
+
+    if (landingLoginForm) {
+        landingLoginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const name = document.getElementById("landing-login-name").value.trim();
+            const password = document.getElementById("landing-login-password").value;
+
+            try {
+                const res = await apiFetch("/api/auth/login", {
+                    method: "POST",
+                    body: JSON.stringify({ name, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    token = data.access_token;
+                    currentUser = data.user;
+                    localStorage.setItem("foody_token", token);
+                    updateAuthUI();
+                    landingLoginForm.reset();
+                    showToast(`С возвращением в Семейное Кафе, ${currentUser.name}! 👋`);
+                    fetchDishes();
+                    fetchUsers();
+                    fetchOrders();
+                    fetchUserStats();
+                } else {
+                    let errMsg = "Ошибка входа";
+                    if (data && data.detail) {
+                        errMsg = typeof data.detail === "string" ? data.detail : (Array.isArray(data.detail) ? data.detail.map(d => d.msg).join(", ") : JSON.stringify(data.detail));
+                    }
+                    showToast(errMsg);
+                }
+            } catch (err) {
+                showToast("Ошибка сети при входе");
+            }
+        });
+    }
+
+    if (landingRegisterForm) {
+        landingRegisterForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const name = document.getElementById("landing-register-name").value.trim();
+            const password = document.getElementById("landing-register-password").value;
+            const target_calories = parseFloat(document.getElementById("landing-register-calories").value) || 2000;
+
+            try {
+                const res = await apiFetch("/api/auth/register", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        name,
+                        password,
+                        target_calories,
+                        target_proteins: 100,
+                        target_fats: 60,
+                        target_carbs: 250
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    token = data.access_token;
+                    currentUser = data.user;
+                    localStorage.setItem("foody_token", token);
+                    updateAuthUI();
+                    landingRegisterForm.reset();
+                    showToast(`Добро пожаловать в Семейное Кафе, ${currentUser.name}! 🎉`);
+                    fetchDishes();
+                    fetchUsers();
+                    fetchOrders();
+                    fetchUserStats();
+                } else {
+                    let errMsg = "Ошибка регистрации";
+                    if (data && data.detail) {
+                        errMsg = typeof data.detail === "string" ? data.detail : (Array.isArray(data.detail) ? data.detail.map(d => d.msg).join(", ") : JSON.stringify(data.detail));
+                    }
+                    showToast(errMsg);
+                }
+            } catch (err) {
+                showToast("Ошибка при отправке данных");
+            }
         });
     }
 

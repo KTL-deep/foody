@@ -17,33 +17,80 @@
 </head>
 <body>
     <div class="container">
-        <!-- Шапка и навигация -->
-        <header>
-            <div class="header-top">
-                <div class="logo-section">
-                    <h1>Семейное <span>Кафе</span></h1>
-                    <p>Наш уютный домашний ресторан</p>
+        <!-- СТАРТОВЫЙ ЭКРАН ВХОДА (ПОКАЗЫВАЕТСЯ ЕСЛИ НЕ АВТОРИЗОВАН) -->
+        <div id="welcome-screen" style="max-width: 440px; margin: 40px auto; text-align: center;">
+            <div class="welcome-card" style="background: var(--card-bg); padding: 35px 30px; border-radius: var(--radius-cozy); box-shadow: var(--shadow-cozy); border: 1px solid var(--border-cozy);">
+                <div class="logo-section" style="margin-bottom: 25px;">
+                    <img src="/static/favicon.png" alt="Logo" style="width: 72px; height: 72px; margin-bottom: 10px; border-radius: 18px;">
+                    <h1 style="font-size: 2.4rem;">Семейное <span style="color: var(--accent-terracotta); font-style: italic;">Кафе</span></h1>
+                    <p style="font-size: 0.85rem; margin-top: 5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Уютный домашний ресторан</p>
                 </div>
-                <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
-                    <div id="auth-user-badge" style="display: none; align-items: center; gap: 8px;">
-                        <span id="auth-user-name" style="font-weight: 600;">👤 Имя</span>
-                        <button id="logout-btn" class="btn-cozy" style="padding: 6px 12px; font-size: 0.85rem;" title="Выйти">🚪 Выйти</button>
+
+                <div class="auth-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border-cozy); padding-bottom: 12px;">
+                    <button type="button" class="btn-cozy active" id="landing-tab-login-btn" style="flex: 1;">Вход</button>
+                    <button type="button" class="btn-cozy" id="landing-tab-register-btn" style="flex: 1;">Регистрация</button>
+                </div>
+
+                <!-- Форма входа -->
+                <form id="landing-login-form">
+                    <div class="form-group" style="text-align: left;">
+                        <label class="form-label" for="landing-login-name">Ваше имя *</label>
+                        <input class="form-input" type="text" id="landing-login-name" required placeholder="Например: Кирилл">
                     </div>
-                    <button id="open-auth-btn" class="btn-cozy" style="padding: 6px 12px; font-size: 0.85rem;">🔑 Войти</button>
-                    <button id="theme-toggle" class="theme-toggle-btn" title="Переключить тему">
-                        <span class="theme-icon-sun">☀️</span>
-                        <span class="theme-icon-moon">🌙</span>
-                    </button>
-                </div>
+                    <div class="form-group" style="text-align: left; margin-top: 15px;">
+                        <label class="form-label" for="landing-login-password">Пароль *</label>
+                        <input class="form-input" type="password" id="landing-login-password" required placeholder="Ваш пароль">
+                    </div>
+                    <button type="submit" class="btn-submit" style="width: 100%; margin-top: 20px;">Войти в кафе 🔑</button>
+                </form>
+
+                <!-- Форма регистрации -->
+                <form id="landing-register-form" style="display: none;">
+                    <div class="form-group" style="text-align: left;">
+                        <label class="form-label" for="landing-register-name">Ваше имя *</label>
+                        <input class="form-input" type="text" id="landing-register-name" required placeholder="Например: Маша">
+                    </div>
+                    <div class="form-group" style="text-align: left; margin-top: 15px;">
+                        <label class="form-label" for="landing-register-password">Пароль *</label>
+                        <input class="form-input" type="password" id="landing-register-password" required placeholder="Минимум 4 символа">
+                    </div>
+                    <div class="form-group" style="text-align: left; margin-top: 15px;">
+                        <label class="form-label" for="landing-register-calories">Суточная цель по калориям</label>
+                        <input class="form-input" type="number" id="landing-register-calories" value="2000">
+                    </div>
+                    <button type="submit" class="btn-submit" style="width: 100%; margin-top: 20px;">Зарегистрироваться ✨</button>
+                </form>
             </div>
-            <nav>
-                <button class="nav-btn active" data-tab="menu-tab">📜 Меню</button>
-                <button class="nav-btn" data-tab="orders-tab" id="orders-nav-btn">🛒 Заказы <span id="pending-orders-badge" style="display: none; background: #D96A4F; color: white; border-radius: 50%; padding: 2px 7px; font-size: 0.75rem; margin-left: 5px;">0</span></button>
-                <button class="nav-btn" data-tab="profile-tab">👤 Профиль</button>
-                <button class="nav-btn" data-tab="grocery-tab">📝 Список</button>
-                <button class="nav-btn" data-tab="add-tab">➕ Новое Блюдо</button>
-            </nav>
-        </header>
+        </div>
+
+        <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ (ОТКРЫВАЕТСЯ ПОСЛЕ АВТОРИЗАЦИИ) -->
+        <div id="main-app-wrapper" style="display: none;">
+            <!-- Шапка и навигация -->
+            <header>
+                <div class="header-top">
+                    <div class="logo-section">
+                        <h1>Семейное <span>Кафе</span></h1>
+                        <p>Наш уютный домашний ресторан</p>
+                    </div>
+                    <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
+                        <div id="auth-user-badge" style="display: flex; align-items: center; gap: 8px;">
+                            <span id="auth-user-name" style="font-weight: 600;">👤 Имя</span>
+                            <button id="logout-btn" class="btn-cozy" style="padding: 6px 12px; font-size: 0.85rem;" title="Выйти">🚪 Выйти</button>
+                        </div>
+                        <button id="theme-toggle" class="theme-toggle-btn" title="Переключить тему">
+                            <span class="theme-icon-sun">☀️</span>
+                            <span class="theme-icon-moon">🌙</span>
+                        </button>
+                    </div>
+                </div>
+                <nav>
+                    <button class="nav-btn active" data-tab="menu-tab">📜 Меню</button>
+                    <button class="nav-btn" data-tab="orders-tab" id="orders-nav-btn">🛒 Заказы <span id="pending-orders-badge" style="display: none; background: #D96A4F; color: white; border-radius: 50%; padding: 2px 7px; font-size: 0.75rem; margin-left: 5px;">0</span></button>
+                    <button class="nav-btn" data-tab="profile-tab">👤 Профиль</button>
+                    <button class="nav-btn" data-tab="grocery-tab">📝 Список</button>
+                    <button class="nav-btn" data-tab="add-tab">➕ Новое Блюдо</button>
+                </nav>
+            </header>
 
         <!-- Вкладка: МЕНЮ -->
         <main id="menu-tab" class="tab-content active">
@@ -326,6 +373,7 @@
             </form>
         </div>
     </div>
+    </div> <!-- Конец main-app-wrapper -->
 
     <!-- МОДАЛЬНОЕ ОКНО: АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ -->
     <div class="modal" id="auth-modal">
