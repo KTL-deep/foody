@@ -30,6 +30,8 @@
             <nav>
                 <button class="nav-btn active" data-tab="menu-tab">📜 Меню</button>
                 <button class="nav-btn" data-tab="orders-tab" id="orders-nav-btn">🛒 Заказы <span id="pending-orders-badge" style="display: none; background: #D96A4F; color: white; border-radius: 50%; padding: 2px 7px; font-size: 0.75rem; margin-left: 5px;">0</span></button>
+                <button class="nav-btn" data-tab="profile-tab">👤 Профиль</button>
+                <button class="nav-btn" data-tab="grocery-tab">📝 Список</button>
                 <button class="nav-btn" data-tab="add-tab">➕ Новое Блюдо</button>
             </nav>
         </header>
@@ -46,7 +48,7 @@
                 <button class="filter-btn" data-category="Десерт">Десерты 🍰</button>
             </div>
 
-            <!-- Управление меню (поиск, сортировка, архив) -->
+            <!-- Управление меню -->
             <div class="menu-controls">
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
@@ -70,14 +72,11 @@
             </div>
 
             <!-- Сетка блюд -->
-            <div class="dishes-grid" id="dishes-container">
-                <!-- Карточки будут добавлены динамически с помощью JS -->
-            </div>
+            <div class="dishes-grid" id="dishes-container"></div>
         </main>
 
         <!-- Вкладка: АКТУАЛЬНЫЕ ЗАКАЗЫ -->
         <section id="orders-tab" class="tab-content">
-            <!-- Дневной баланс КБЖУ членов семьи -->
             <div class="kbju-summary-container">
                 <div class="kbju-summary-header">
                     <div class="kbju-summary-title-sec">
@@ -89,31 +88,87 @@
                         <input class="form-input" type="date" id="summary-date">
                     </div>
                 </div>
-                <div class="kbju-summary-grid" id="kbju-summary-grid">
-                    <!-- Заполняется динамически через JS -->
-                </div>
+                <div class="kbju-summary-grid" id="kbju-summary-grid"></div>
             </div>
 
             <div class="orders-sections">
-                <!-- Левая колонка: Что готовится / ждет -->
                 <div class="orders-column">
                     <h2 class="order-column-title">⏳ В ожидании <span id="count-pending">0</span></h2>
-                    <div class="orders-list" id="orders-pending-container">
-                        <!-- Сюда добавляются заказы со статусом pending -->
-                    </div>
+                    <div class="orders-list" id="orders-pending-container"></div>
                 </div>
-
-                <!-- Правая колонка: В процессе и выполнено -->
                 <div class="orders-column">
                     <h2 class="order-column-title">🍳 Готовится <span id="count-accepted">0</span></h2>
-                    <div class="orders-list" id="orders-accepted-container" style="margin-bottom: 30px;">
-                        <!-- Сюда добавляются заказы со статусом accepted -->
-                    </div>
-
+                    <div class="orders-list" id="orders-accepted-container" style="margin-bottom: 30px;"></div>
                     <h2 class="order-column-title" style="opacity: 0.75;">🎉 Готово <span id="count-completed">0</span></h2>
-                    <div class="orders-list" id="orders-completed-container">
-                        <!-- Сюда добавляются выполненные заказы -->
+                    <div class="orders-list" id="orders-completed-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Вкладка: ПРОФИЛЬ -->
+        <section id="profile-tab" class="tab-content">
+            <div class="profile-container">
+                <div class="user-selector-card" style="background: var(--card-bg); padding: 20px; border-radius: var(--radius-cozy); box-shadow: var(--shadow-cozy); border: 1px solid var(--border-cozy);">
+                    <h2>👤 Кто вы сегодня?</h2>
+                    <select id="user-select" class="form-input" style="margin-top: 10px;">
+                        <!-- Заполняется динамически -->
+                    </select>
+                </div>
+
+                <div id="user-stats-container" style="margin-top: 20px;">
+                    <!-- Статистика через JS -->
+                </div>
+
+                <div class="cozy-form-container" style="margin-top: 20px;">
+                    <h3>⚙️ Настройки моих целей (КБЖУ)</h3>
+                    <form id="user-targets-form">
+                        <div class="form-kbju-row">
+                            <div class="form-group">
+                                <label class="form-label" for="target-calories">Калории</label>
+                                <input class="form-input" type="number" id="target-calories">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="target-proteins">Белки</label>
+                                <input class="form-input" type="number" id="target-proteins">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="target-fats">Жиры</label>
+                                <input class="form-input" type="number" id="target-fats">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="target-carbs">Углеводы</label>
+                                <input class="form-input" type="number" id="target-carbs">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-submit">Обновить мои цели</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Вкладка: СПИСОК ПРОДУКТОВ -->
+        <section id="grocery-tab" class="tab-content">
+            <div class="grocery-container">
+                <div class="cozy-form-container">
+                    <h2>📝 Список продуктов на неделю</h2>
+                    <p>Приложение соберет все ингредиенты из ваших заказов за выбранный период.</p>
+                    <div class="form-row" style="margin-top: 15px;">
+                        <div class="form-group">
+                            <label class="form-label" for="grocery-start">С какой даты:</label>
+                            <input class="form-input" type="date" id="grocery-start">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="grocery-end">По какую дату:</label>
+                            <input class="form-input" type="date" id="grocery-end">
+                        </div>
                     </div>
+                    <button id="generate-grocery-btn" class="btn-submit">🛒 Создать список</button>
+                </div>
+
+                <div id="grocery-result" class="grocery-list-card" style="display: none; margin-top: 20px; background: var(--card-bg); padding: 25px; border-radius: var(--radius-cozy); box-shadow: var(--shadow-cozy); border: 1px solid var(--border-cozy);">
+                    <h3>🥘 Что нужно купить:</h3>
+                    <ul id="grocery-items" class="check-list" style="margin-top: 15px; padding-left: 0;"></ul>
+                    <button onclick="window.print()" class="btn-cozy" style="margin-top: 15px; width: 100%;">🖨 Печать / Сохранить в PDF</button>
                 </div>
             </div>
         </section>
@@ -125,9 +180,8 @@
                 <form id="add-dish-form">
                     <div class="form-group">
                         <label class="form-label" for="dish-name">Название блюда *</label>
-                        <input class="form-input" type="text" id="dish-name" required placeholder="Например: Пышные оладьи">
+                        <input class="form-input" type="text" id="dish-name" required>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label" for="dish-category">Категория *</label>
@@ -140,47 +194,41 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" for="dish-time">Время приготовления (минут)</label>
-                            <input class="form-input" type="number" id="dish-time" min="0" value="20">
+                            <label class="form-label" for="dish-time">Время (мин)</label>
+                            <input class="form-input" type="number" id="dish-time" value="20">
                         </div>
                     </div>
-
                     <div class="form-group">
-                        <label class="form-label" for="dish-desc">Описание блюда</label>
-                        <textarea class="form-input" id="dish-desc" rows="2" placeholder="Краткое аппетитное описание..."></textarea>
+                        <label class="form-label" for="dish-desc">Описание</label>
+                        <textarea class="form-input" id="dish-desc" rows="2"></textarea>
                     </div>
-
                     <div class="form-group">
-                        <label class="form-label" for="dish-recipe">Рецепт (шаги приготовления)</label>
-                        <textarea class="form-input" id="dish-recipe" rows="4" placeholder="Шаг 1. ...&#10;Шаг 2. ..."></textarea>
+                        <label class="form-label" for="dish-recipe">Рецепт</label>
+                        <textarea class="form-input" id="dish-recipe" rows="4"></textarea>
                     </div>
-
                     <div class="form-group">
-                        <label class="form-label" for="dish-image">Ссылка на изображение</label>
-                        <input class="form-input" type="url" id="dish-image" placeholder="https://example.com/photo.jpg">
+                        <label class="form-label" for="dish-ingredients">Ингредиенты (через запятую)</label>
+                        <textarea class="form-input" id="dish-ingredients" rows="2"></textarea>
                     </div>
-
-                    <div class="form-label">Пищевая ценность (КБЖУ на 100г или на порцию)</div>
+                    <div class="form-group">
+                        <label class="form-label">Фото блюда</label>
+                        <div class="photo-upload-container">
+                            <input type="hidden" id="dish-image">
+                            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;">
+                            <button type="button" class="btn-cozy" onclick="document.getElementById('camera-input').click()">📸 Сделать фото</button>
+                            <span id="photo-status" style="margin-left: 10px; font-size: 0.85rem;">Фото не выбрано</span>
+                        </div>
+                        <div id="photo-preview" style="margin-top: 10px; display: none;">
+                            <img src="" alt="Preview" style="max-width: 100%; border-radius: 8px;">
+                        </div>
+                    </div>
                     <div class="form-kbju-row">
-                        <div class="form-group">
-                            <label class="form-label" for="dish-calories" style="font-size: 0.75rem;">Калории</label>
-                            <input class="form-input" type="number" step="0.1" id="dish-calories" min="0" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="dish-proteins" style="font-size: 0.75rem;">Белки (г)</label>
-                            <input class="form-input" type="number" step="0.1" id="dish-proteins" min="0" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="dish-fats" style="font-size: 0.75rem;">Жиры (г)</label>
-                            <input class="form-input" type="number" step="0.1" id="dish-fats" min="0" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="dish-carbs" style="font-size: 0.75rem;">Углев. (г)</label>
-                            <input class="form-input" type="number" step="0.1" id="dish-carbs" min="0" value="0">
-                        </div>
+                        <div class="form-group"><label class="form-label">Ккал</label><input class="form-input" type="number" step="0.1" id="dish-calories" value="0"></div>
+                        <div class="form-group"><label class="form-label">Белки</label><input class="form-input" type="number" step="0.1" id="dish-proteins" value="0"></div>
+                        <div class="form-group"><label class="form-label">Жиры</label><input class="form-input" type="number" step="0.1" id="dish-fats" value="0"></div>
+                        <div class="form-group"><label class="form-label">Углев</label><input class="form-input" type="number" step="0.1" id="dish-carbs" value="0"></div>
                     </div>
-
-                    <button type="submit" class="btn-submit">Добавить в семейную книгу</button>
+                    <button type="submit" class="btn-submit">Добавить в меню</button>
                 </form>
             </div>
         </section>
@@ -195,42 +243,33 @@
                 <input type="hidden" id="order-dish-id">
                 <div class="form-group">
                     <label class="form-label">Блюдо</label>
-                    <input class="form-input" type="text" id="order-dish-name" readonly style="opacity: 0.8; background-color: var(--border-cozy);">
+                    <input class="form-input" type="text" id="order-dish-name" readonly>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label" for="order-by">Кто заказывает? *</label>
                     <select class="form-input" id="order-by" required>
-                        <option value="" disabled selected>Выберите имя...</option>
                         <option value="Мама">Мама</option>
                         <option value="Папа">Папа</option>
                         <option value="Кирилл">Кирилл</option>
                         <option value="Маша">Маша</option>
                     </select>
                 </div>
-
                 <div class="form-row">
+                    <div class="form-group"><label class="form-label">Дата</label><input class="form-input" type="date" id="order-date" required></div>
                     <div class="form-group">
-                        <label class="form-label" for="order-date">На какой день? *</label>
-                        <input class="form-input" type="date" id="order-date" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="order-time">Время / Прием пищи *</label>
+                        <label class="form-label">Время</label>
                         <select class="form-input" id="order-time" required>
                             <option value="Завтрак">Завтрак</option>
                             <option value="Обед">Обед</option>
                             <option value="Ужин">Ужин</option>
-                            <option value="Полдник">Полдник</option>
                         </select>
                     </div>
                 </div>
-
                 <div class="form-group">
-                    <label class="form-label" for="order-note">Пожелания (соус, добавки, исключить аллергены)</label>
-                    <input class="form-input" type="text" id="order-note" placeholder="Например: побольше ягод, без сахара">
+                    <label class="form-label" for="order-note">Пожелания</label>
+                    <input class="form-input" type="text" id="order-note">
                 </div>
-
-                <button type="submit" class="btn-submit" style="background-color: var(--accent-terracotta);">Подтвердить заказ</button>
+                <button type="submit" class="btn-submit">Подтвердить заказ</button>
             </form>
         </div>
     </div>
@@ -239,91 +278,35 @@
     <div class="modal" id="recipe-modal">
         <div class="modal-content" style="max-width: 550px;">
             <button class="modal-close" id="close-recipe-modal">&times;</button>
-            <h2 class="modal-title" id="recipe-title">Название блюда</h2>
+            <h2 class="modal-title" id="recipe-title">Название</h2>
             <div class="recipe-modal-body">
-                <div class="kbju-tags" id="recipe-kbju" style="margin-bottom: 20px;">
-                    <!-- Наполняется динамически -->
-                </div>
-                <h3 style="font-size: 1.1rem; margin-bottom: 8px;">Шаги приготовления:</h3>
-                <div class="recipe-text-block" id="recipe-instructions">
-                    <!-- Наполняется динамически -->
-                </div>
+                <div class="kbju-tags" id="recipe-kbju"></div>
+                <div class="recipe-text-block" id="recipe-instructions"></div>
             </div>
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО: РЕДАКТИРОВАНИЕ БЛЮДА -->
+    <!-- МОДАЛЬНОЕ ОКНО: РЕДАКТИРОВАНИЕ -->
     <div class="modal" id="edit-dish-modal">
         <div class="modal-content" style="max-width: 550px;">
             <button class="modal-close" id="close-edit-dish-modal">&times;</button>
-            <h2 class="modal-title">✏️ Редактировать блюдо</h2>
+            <h2 class="modal-title">✏️ Редактировать</h2>
             <form id="edit-dish-form">
                 <input type="hidden" id="edit-dish-id">
-                <div class="form-group">
-                    <label class="form-label" for="edit-dish-name">Название блюда *</label>
-                    <input class="form-input" type="text" id="edit-dish-name" required placeholder="Например: Пышные оладьи">
+                <div class="form-group"><input class="form-input" type="text" id="edit-dish-name" required></div>
+                <div class="form-group"><textarea class="form-input" id="edit-dish-ingredients" rows="2"></textarea></div>
+                <div class="photo-upload-container">
+                    <input type="hidden" id="edit-dish-image">
+                    <input type="file" id="edit-camera-input" accept="image/*" capture="environment" style="display: none;">
+                    <button type="button" class="btn-cozy" onclick="document.getElementById('edit-camera-input').click()">📸 Обновить фото</button>
+                    <span id="edit-photo-status" style="margin-left: 10px; font-size: 0.85rem;">Без изменений</span>
                 </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label" for="edit-dish-category">Категория *</label>
-                        <select class="form-input" id="edit-dish-category" required>
-                            <option value="Завтрак">Завтрак</option>
-                            <option value="Обед">Обед</option>
-                            <option value="Ужин">Ужин</option>
-                            <option value="Выпечка">Выпечка</option>
-                            <option value="Десерт">Десерт</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="edit-dish-time">Время приготовления (минут)</label>
-                        <input class="form-input" type="number" id="edit-dish-time" min="0">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="edit-dish-desc">Описание блюда</label>
-                    <textarea class="form-input" id="edit-dish-desc" rows="2" placeholder="Краткое аппетитное описание..."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="edit-dish-recipe">Рецепт (шаги приготовления)</label>
-                    <textarea class="form-input" id="edit-dish-recipe" rows="4" placeholder="Шаг 1. ..."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="edit-dish-image">Ссылка на изображение</label>
-                    <input class="form-input" type="url" id="edit-dish-image" placeholder="https://example.com/photo.jpg">
-                </div>
-
-                <div class="form-label">Пищевая ценность (КБЖУ)</div>
-                <div class="form-kbju-row">
-                    <div class="form-group">
-                        <label class="form-label" for="edit-dish-calories" style="font-size: 0.75rem;">Калории</label>
-                        <input class="form-input" type="number" step="0.1" id="edit-dish-calories" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="edit-dish-proteins" style="font-size: 0.75rem;">Белки (г)</label>
-                        <input class="form-input" type="number" step="0.1" id="edit-dish-proteins" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="edit-dish-fats" style="font-size: 0.75rem;">Жиры (г)</label>
-                        <input class="form-input" type="number" step="0.1" id="edit-dish-fats" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="edit-dish-carbs" style="font-size: 0.75rem;">Углев. (г)</label>
-                        <input class="form-input" type="number" step="0.1" id="edit-dish-carbs" min="0">
-                    </div>
-                </div>
-
-                <button type="submit" class="btn-submit" style="background-color: var(--accent-terracotta);">Сохранить изменения</button>
+                <button type="submit" class="btn-submit">Сохранить</button>
             </form>
         </div>
     </div>
 
-    <!-- Toast сообщения -->
     <div class="toast" id="toast-notification">Уведомление</div>
-
     <script src="/static/js/app.js"></script>
 </body>
 </html>
