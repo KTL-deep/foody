@@ -137,7 +137,7 @@ def register(user_data: schemas.UserRegister, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Пользователь с таким именем уже существует")
     
     new_user = crud.create_user(db=db, user=schemas.UserCreate(**user_data.model_dump()))
-    access_token = create_access_token(data={"sub": new_user.id})
+    access_token = create_access_token(data={"sub": str(new_user.id)})
     return {"access_token": access_token, "token_type": "bearer", "user": new_user}
 
 @app.post("/api/auth/login", response_model=schemas.Token)
@@ -155,7 +155,7 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
-    access_token = create_access_token(data={"sub": user.id})
+    access_token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer", "user": user}
 
 @app.get("/api/auth/me", response_model=schemas.User)

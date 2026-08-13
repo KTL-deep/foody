@@ -37,6 +37,8 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
+    if "sub" in to_encode:
+        to_encode["sub"] = str(to_encode["sub"])
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -54,10 +56,11 @@ def get_current_user(
     token = auth.credentials
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: int = payload.get("sub")
-        if user_id is None:
+        sub = payload.get("sub")
+        if sub is None:
             return None
-    except jwt.PyJWTError:
+        user_id = int(sub)
+    except (jwt.PyJWTError, ValueError, TypeError):
         return None
     
     user = db.query(models.User).filter(models.User.id == user_id).first()

@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let orders = [];
     let users = [];
     let currentUser = null;
+    let selectedUserId = null;
     let token = localStorage.getItem("foody_token") || null;
     let currentCategory = "all";
 
@@ -162,16 +163,19 @@ document.addEventListener("DOMContentLoaded", () => {
             if (mainAppWrapper) mainAppWrapper.style.display = "block";
             if (authUserBadge) authUserBadge.style.display = "flex";
             if (authUserName) authUserName.textContent = `👤 ${currentUser.name}`;
-            if (userSelect) userSelect.value = currentUser.id;
+            if (!selectedUserId) selectedUserId = currentUser.id;
+            if (userSelect) userSelect.value = selectedUserId;
         } else {
             if (welcomeScreen) welcomeScreen.style.display = "block";
             if (mainAppWrapper) mainAppWrapper.style.display = "none";
             if (authUserBadge) authUserBadge.style.display = "none";
+            selectedUserId = null;
         }
     }
 
     async function checkAuth() {
         if (!token) {
+            currentUser = null;
             updateAuthUI();
             return;
         }
@@ -179,6 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await apiFetch("/api/auth/me");
             if (response.ok) {
                 currentUser = await response.json();
+                selectedUserId = currentUser.id;
                 updateAuthUI();
                 fetchDishes();
                 fetchUsers();
@@ -186,11 +191,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 fetchUserStats();
             } else {
                 token = null;
+                currentUser = null;
                 localStorage.removeItem("foody_token");
                 updateAuthUI();
             }
         } catch (e) {
             console.error(e);
+            token = null;
+            currentUser = null;
+            localStorage.removeItem("foody_token");
+            updateAuthUI();
         }
     }
 
@@ -210,6 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
         logoutBtn.addEventListener("click", () => {
             token = null;
             currentUser = null;
+            selectedUserId = null;
             localStorage.removeItem("foody_token");
             updateAuthUI();
             showToast("Вы вышли из профиля 🚪");
@@ -247,6 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (res.ok) {
                     token = data.access_token;
                     currentUser = data.user;
+                    selectedUserId = currentUser.id;
                     localStorage.setItem("foody_token", token);
                     updateAuthUI();
                     landingLoginForm.reset();
@@ -291,6 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (res.ok) {
                     token = data.access_token;
                     currentUser = data.user;
+                    selectedUserId = currentUser.id;
                     localStorage.setItem("foody_token", token);
                     updateAuthUI();
                     landingRegisterForm.reset();
@@ -343,11 +356,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (res.ok) {
                     token = data.access_token;
                     currentUser = data.user;
+                    selectedUserId = currentUser.id;
                     localStorage.setItem("foody_token", token);
                     updateAuthUI();
                     authModal.classList.remove("active");
                     loginForm.reset();
                     showToast(`С возвращением, ${currentUser.name}! 👋`);
+                    fetchDishes();
+                    fetchUsers();
+                    fetchOrders();
                     fetchUserStats();
                 } else {
                     showToast(data.detail || "Ошибка входа");
@@ -480,11 +497,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await apiFetch("/api/users");
             users = await response.json();
             renderUserSelect();
-            if (users.length > 0 && !currentUser) {
-                currentUser = users[0];
-                if (userSelect) userSelect.value = currentUser.id;
-                fetchUserStats();
+            if (users.length > 0 && !selectedUserId) {
+                selectedUserId = currentUser ? currentUser.id : users[0].id;
+                if (userSelect) userSelect.value = selectedUserId;
             }
+            fetchUserStats();
         } catch (error) {
             console.error(error);
         }
@@ -493,12 +510,17 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderUserSelect() {
         if (!userSelect) return;
         userSelect.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
-        if (currentUser) userSelect.value = currentUser.id;
+        if (selectedUserId) {
+            userSelect.value = selectedUserId;
+        } else if (currentUser) {
+            userSelect.value = currentUser.id;
+            selectedUserId = currentUser.id;
+        }
     }
 
     if (userSelect) {
         userSelect.addEventListener("change", (e) => {
-            currentUser = users.find(u => u.id == e.target.value);
+            selectedUserId = parseInt(e.target.value);
             fetchUserStats();
         });
     }
@@ -535,9 +557,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (statsPeriodYearBtn) statsPeriodYearBtn.addEventListener("click", () => setStatsPeriod("year", statsPeriodYearBtn));
 
     async function fetchUserStats() {
-        if (!currentUser) return;
+        const targetUserId = selectedUserId || (currentUser ? currentUser.id : null);
+        if (!targetUserId) return;
         try {
-            const response = await apiFetch(`/api/users/${currentUser.id}/stats?period=${statsPeriod}&target_date=${statsDate}`);
+            const response = await apiFetch(`/api/users/${targetUserId}/stats?period=${statsPeriod}&target_date=${statsDate}`);
             const stats = await response.json();
             renderUserStats(stats);
             if (document.getElementById("target-calories")) {
@@ -612,20 +635,35 @@ document.addEventListener("DOMContentLoaded", () => {
     if (userTargetsForm) {
         userTargetsForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            if (!currentUser) return;
+            if (!currentUser) {
+                showToast("Необходимо войти в профиль 🔑");
+                return;
+            }
             const data = {
-                target_calories: parseFloat(document.getElementById("target-calories").value),
-                target_proteins: parseFloat(document.getElementById("target-proteins").value),
-                target_fats: parseFloat(document.getElementById("target-fats").value),
-                target_carbs: parseFloat(document.getElementById("target-carbs").value)
+                target_calories: parseFloat(document.getElementById("target-calories").value) || 2000,
+                target_proteins: parseFloat(document.getElementById("target-proteins").value) || 100,
+                target_fats: parseFloat(document.getElementById("target-fats").value) || 60,
+                target_carbs: parseFloat(document.getElementById("target-carbs").value) || 250
             };
             try {
-                await apiFetch(`/api/users/${currentUser.id}`, {
+                const res = await apiFetch(`/api/users/${currentUser.id}`, {
                     method: "PATCH",
                     body: JSON.stringify(data)
                 });
-                showToast("Цели обновлены! 💪");
-                fetchUserStats();
+                const resData = await res.json();
+                if (res.ok) {
+                    currentUser = resData;
+                    selectedUserId = currentUser.id;
+                    if (userSelect) userSelect.value = selectedUserId;
+                    showToast("Цели обновлены! 💪");
+                    fetchUserStats();
+                } else {
+                    let errMsg = "Ошибка при обновлении целей";
+                    if (resData && resData.detail) {
+                        errMsg = typeof resData.detail === "string" ? resData.detail : (Array.isArray(resData.detail) ? resData.detail.map(d => d.msg).join(", ") : JSON.stringify(resData.detail));
+                    }
+                    showToast(errMsg);
+                }
             } catch (error) {
                 showToast("Ошибка при обновлении целей");
             }
