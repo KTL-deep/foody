@@ -10,9 +10,31 @@ from datetime import date
 
 from app import models, schemas, crud
 from app.database import engine, get_db
+from app.auth import (
+    get_password_hash,
+    verify_password,
+    create_access_token,
+    get_current_user,
+    require_current_user,
+)
 
-# Создание таблиц при запуске
+from sqlalchemy import text
+
+# Создание таблиц и легкая авто-миграция для SQLite
 models.Base.metadata.create_all(bind=engine)
+
+def auto_migrate():
+    with engine.connect() as conn:
+        try:
+            result = conn.execute(text("PRAGMA table_info(users)")).fetchall()
+            columns = [row[1] for row in result]
+            if "hashed_password" not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN hashed_password VARCHAR"))
+                conn.commit()
+        except Exception as e:
+            print(f"Auto-migration note: {e}")
+
+auto_migrate()
 
 app = FastAPI(title="Семейное Кафе 🍳")
 
@@ -106,6 +128,39 @@ seed_data(db)
 db.close()
 
 # --- API Endpoints ---
+
+# Аутентификация и Авторизация
+@app.post("/api/auth/register", response_model=schemas.Token)
+def register(user_data: schemas.UserRegister, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_name(db, name=user_data.name)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Пользователь с таким именем уже существует")
+    
+    new_user = crud.create_user(db=db, user=schemas.UserCreate(**user_data.model_dump()))
+    access_token = create_access_token(data={"sub": new_user.id})
+    return {"access_token": access_token, "token_type": "bearer", "user": new_user}
+
+@app.post("/api/auth/login", response_model=schemas.Token)
+def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+    user = crud.get_user_by_name(db, name=credentials.name)
+    if not user:
+        raise HTTPException(status_code=400, detail="Неверное имя пользователя или пароль")
+    
+    if user.hashed_password:
+        if not verify_password(credentials.password, user.hashed_password):
+            raise HTTPException(status_code=400, detail="Неверное имя пользователя или пароль")
+    else:
+        # Автоматическая привязка пароля для старого аккаунта при первом входе
+        user.hashed_password = get_password_hash(credentials.password)
+        db.commit()
+        db.refresh(user)
+
+    access_token = create_access_token(data={"sub": user.id})
+    return {"access_token": access_token, "token_type": "bearer", "user": user}
+
+@app.get("/api/auth/me", response_model=schemas.User)
+def get_me(current_user: models.User = Depends(require_current_user)):
+    return current_user
 
 # Пользователи
 @app.get("/api/users", response_model=list[schemas.User])

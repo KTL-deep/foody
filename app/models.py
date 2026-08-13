@@ -9,6 +9,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=True)
     # Цели по КБЖУ для члена семьи
     target_calories = Column(Float, default=2000.0)
     target_proteins = Column(Float, default=100.0)

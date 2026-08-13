@@ -11,7 +11,19 @@ class UserBase(BaseModel):
     target_carbs: float = 250.0
 
 class UserCreate(UserBase):
-    pass
+    password: Optional[str] = None
+
+class UserRegister(UserBase):
+    password: str
+
+class UserLogin(BaseModel):
+    name: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: "User"
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -19,6 +31,7 @@ class UserUpdate(BaseModel):
     target_proteins: Optional[float] = None
     target_fats: Optional[float] = None
     target_carbs: Optional[float] = None
+    password: Optional[str] = None
 
 class User(UserBase):
     id: int

@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let orders = [];
     let users = [];
     let currentUser = null;
+    let token = localStorage.getItem("foody_token") || null;
     let currentCategory = "all";
 
     // --- Helper: Local Date YYYY-MM-DD ---
@@ -17,6 +18,28 @@ document.addEventListener("DOMContentLoaded", () => {
         return localDate.toISOString().split('T')[0];
     }
 
+    // --- API Fetch Wrapper with Auth Header ---
+    async function apiFetch(url, options = {}) {
+        const headers = options.headers || {};
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+        if (options.body && !(options.body instanceof FormData) && !headers["Content-Type"]) {
+            headers["Content-Type"] = "application/json";
+        }
+        options.headers = headers;
+
+        const response = await fetch(url, options);
+        if (response.status === 401) {
+            // Token expired or invalid
+            token = null;
+            currentUser = null;
+            localStorage.removeItem("foody_token");
+            updateAuthUI();
+        }
+        return response;
+    }
+
     // --- DOM Elements ---
     const navButtons = document.querySelectorAll(".nav-btn");
     const tabContents = document.querySelectorAll(".tab-content");
@@ -25,6 +48,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Theme Toggle
     const themeToggleBtn = document.getElementById("theme-toggle");
+
+    // Auth Elements
+    const openAuthBtn = document.getElementById("open-auth-btn");
+    const authUserBadge = document.getElementById("auth-user-badge");
+    const authUserName = document.getElementById("auth-user-name");
+    const logoutBtn = document.getElementById("logout-btn");
+
+    const authModal = document.getElementById("auth-modal");
+    const closeAuthModalBtn = document.getElementById("close-auth-modal");
+    const authTabLoginBtn = document.getElementById("auth-tab-login-btn");
+    const authTabRegisterBtn = document.getElementById("auth-tab-register-btn");
+    const loginForm = document.getElementById("login-form");
+    const registerForm = document.getElementById("register-form");
 
     // Menu Controls
     const menuSearchInput = document.getElementById("menu-search");
@@ -36,6 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const orderForm = document.getElementById("order-form");
     const orderDishIdInput = document.getElementById("order-dish-id");
     const orderDishNameInput = document.getElementById("order-dish-name");
+    const orderBySelect = document.getElementById("order-by");
     const orderDateInput = document.getElementById("order-date");
     const closeOrderModalBtn = document.getElementById("close-order-modal");
 
@@ -97,9 +134,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const toast = document.getElementById("toast-notification");
 
     // Set Default Dates
-    summaryDateInput.value = getLocalDateString(0); // Today
-    groceryStartInput.value = getLocalDateString(0);
-    groceryEndInput.value = getLocalDateString(7);
+    if (summaryDateInput) summaryDateInput.value = getLocalDateString(0);
+    if (groceryStartInput) groceryStartInput.value = getLocalDateString(0);
+    if (groceryEndInput) groceryEndInput.value = getLocalDateString(7);
 
     // --- Helper: Toast Notification ---
     function showToast(message, duration = 3000) {
@@ -118,6 +155,147 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("theme", newTheme);
     });
 
+    // --- Auth UI Management ---
+    function updateAuthUI() {
+        if (currentUser) {
+            openAuthBtn.style.display = "none";
+            authUserBadge.style.display = "flex";
+            authUserName.textContent = `👤 ${currentUser.name}`;
+            if (userSelect) userSelect.value = currentUser.id;
+        } else {
+            openAuthBtn.style.display = "inline-block";
+            authUserBadge.style.display = "none";
+        }
+    }
+
+    async function checkAuth() {
+        if (!token) {
+            updateAuthUI();
+            return;
+        }
+        try {
+            const response = await apiFetch("/api/auth/me");
+            if (response.ok) {
+                currentUser = await response.json();
+                updateAuthUI();
+                fetchUserStats();
+            } else {
+                token = null;
+                localStorage.removeItem("foody_token");
+                updateAuthUI();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    if (openAuthBtn) {
+        openAuthBtn.addEventListener("click", () => {
+            authModal.classList.add("active");
+        });
+    }
+
+    if (closeAuthModalBtn) {
+        closeAuthModalBtn.addEventListener("click", () => {
+            authModal.classList.remove("active");
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+            token = null;
+            currentUser = null;
+            localStorage.removeItem("foody_token");
+            updateAuthUI();
+            showToast("Вы вышли из профиля 🚪");
+        });
+    }
+
+    if (authTabLoginBtn && authTabRegisterBtn) {
+        authTabLoginBtn.addEventListener("click", () => {
+            authTabLoginBtn.classList.add("active");
+            authTabRegisterBtn.classList.remove("active");
+            loginForm.style.display = "block";
+            registerForm.style.display = "none";
+        });
+
+        authTabRegisterBtn.addEventListener("click", () => {
+            authTabRegisterBtn.classList.add("active");
+            authTabLoginBtn.classList.remove("active");
+            loginForm.style.display = "none";
+            registerForm.style.display = "block";
+        });
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const name = document.getElementById("login-name").value.trim();
+            const password = document.getElementById("login-password").value;
+
+            try {
+                const res = await apiFetch("/api/auth/login", {
+                    method: "POST",
+                    body: JSON.stringify({ name, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    token = data.access_token;
+                    currentUser = data.user;
+                    localStorage.setItem("foody_token", token);
+                    updateAuthUI();
+                    authModal.classList.remove("active");
+                    loginForm.reset();
+                    showToast(`С возвращением, ${currentUser.name}! 👋`);
+                    fetchUserStats();
+                } else {
+                    showToast(data.detail || "Ошибка входа");
+                }
+            } catch (err) {
+                showToast("Ошибка сети при входе");
+            }
+        });
+    }
+
+    if (registerForm) {
+        registerForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const name = document.getElementById("register-name").value.trim();
+            const password = document.getElementById("register-password").value;
+            const target_calories = parseFloat(document.getElementById("register-calories").value) || 2000;
+
+            try {
+                const res = await apiFetch("/api/auth/register", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        name,
+                        password,
+                        target_calories,
+                        target_proteins: 100,
+                        target_fats: 60,
+                        target_carbs: 250
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    token = data.access_token;
+                    currentUser = data.user;
+                    localStorage.setItem("foody_token", token);
+                    updateAuthUI();
+                    authModal.classList.remove("active");
+                    registerForm.reset();
+                    showToast(`Добро пожаловать в систему, ${currentUser.name}! 🎉`);
+                    fetchUsers();
+                    fetchUserStats();
+                } else {
+                    showToast(data.detail || "Ошибка регистрации");
+                }
+            } catch (err) {
+                showToast("Ошибка сети при регистрации");
+            }
+        });
+    }
+
     // --- Tab Switcher ---
     navButtons.forEach(button => {
         button.addEventListener("click", () => {
@@ -133,6 +311,20 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // --- Category Filters ---
+    filterButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            filterButtons.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            currentCategory = btn.getAttribute("data-category");
+            renderDishes();
+        });
+    });
+
+    if (menuSearchInput) menuSearchInput.addEventListener("input", renderDishes);
+    if (menuSortSelect) menuSortSelect.addEventListener("change", renderDishes);
+    if (showArchivedCheckbox) showArchivedCheckbox.addEventListener("change", fetchDishes);
+
     // --- Photo Upload Logic ---
     async function handleFileUpload(file, previewId, statusId, hiddenInputId) {
         const formData = new FormData();
@@ -141,7 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById(statusId).textContent = "Загрузка...";
         
         try {
-            const response = await fetch("/api/upload-photo", {
+            const response = await apiFetch("/api/upload-photo", {
                 method: "POST",
                 body: formData
             });
@@ -150,35 +342,41 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById(statusId).textContent = "Готово ✅";
             
             const preview = document.getElementById(previewId);
-            preview.querySelector("img").src = data.image_url;
-            preview.style.display = "block";
+            if (preview) {
+                preview.querySelector("img").src = data.image_url;
+                preview.style.display = "block";
+            }
         } catch (error) {
             console.error(error);
             document.getElementById(statusId).textContent = "Ошибка ❌";
         }
     }
 
-    cameraInput.addEventListener("change", (e) => {
-        if (e.target.files[0]) {
-            handleFileUpload(e.target.files[0], "photo-preview", "photo-status", "dish-image");
-        }
-    });
+    if (cameraInput) {
+        cameraInput.addEventListener("change", (e) => {
+            if (e.target.files[0]) {
+                handleFileUpload(e.target.files[0], "photo-preview", "photo-status", "dish-image");
+            }
+        });
+    }
 
-    editCameraInput.addEventListener("change", (e) => {
-        if (e.target.files[0]) {
-            handleFileUpload(e.target.files[0], "edit-photo-preview", "edit-photo-status", "edit-dish-image");
-        }
-    });
+    if (editCameraInput) {
+        editCameraInput.addEventListener("change", (e) => {
+            if (e.target.files[0]) {
+                handleFileUpload(e.target.files[0], "edit-photo-preview", "edit-photo-status", "edit-dish-image");
+            }
+        });
+    }
 
     // --- User Management ---
     async function fetchUsers() {
         try {
-            const response = await fetch("/api/users");
+            const response = await apiFetch("/api/users");
             users = await response.json();
             renderUserSelect();
             if (users.length > 0 && !currentUser) {
                 currentUser = users[0];
-                userSelect.value = currentUser.id;
+                if (userSelect) userSelect.value = currentUser.id;
                 fetchUserStats();
             }
         } catch (error) {
@@ -187,53 +385,60 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderUserSelect() {
+        if (!userSelect) return;
         userSelect.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
         if (currentUser) userSelect.value = currentUser.id;
     }
 
-    userSelect.addEventListener("change", (e) => {
-        currentUser = users.find(u => u.id == e.target.value);
-        fetchUserStats();
-    });
+    if (userSelect) {
+        userSelect.addEventListener("change", (e) => {
+            currentUser = users.find(u => u.id == e.target.value);
+            fetchUserStats();
+        });
+    }
 
     async function fetchUserStats() {
         if (!currentUser) return;
         try {
-            const response = await fetch(`/api/users/${currentUser.id}/stats`);
+            const response = await apiFetch(`/api/users/${currentUser.id}/stats`);
             const stats = await response.json();
             renderUserStats(stats);
-            // Fill target form
-            document.getElementById("target-calories").value = stats.targets.target_calories;
-            document.getElementById("target-proteins").value = stats.targets.target_proteins;
-            document.getElementById("target-fats").value = stats.targets.target_fats;
-            document.getElementById("target-carbs").value = stats.targets.target_carbs;
+            if (document.getElementById("target-calories")) {
+                document.getElementById("target-calories").value = stats.targets.target_calories;
+                document.getElementById("target-proteins").value = stats.targets.target_proteins;
+                document.getElementById("target-fats").value = stats.targets.target_fats;
+                document.getElementById("target-carbs").value = stats.targets.target_carbs;
+            }
         } catch (error) {
             console.error(error);
         }
     }
 
     function renderUserStats(stats) {
+        if (!userStatsContainer) return;
         const p = (val, target) => Math.min(100, (val / target) * 100);
         userStatsContainer.innerHTML = `
-            <div class="user-stats-card">
+            <div class="user-stats-card" style="background: var(--card-bg); padding: 20px; border-radius: var(--radius-cozy); border: 1px solid var(--border-cozy); box-shadow: var(--shadow-cozy);">
                 <h3>Привет, ${stats.user_name}! 🍳</h3>
                 <p>Твой прогресс за сегодня (по съеденным блюдам):</p>
                 
-                <div class="stat-row">
+                <div class="stat-row" style="margin-top: 15px;">
                     <span>Калории: ${Math.round(stats.consumed.calories)} / ${stats.targets.target_calories} ккал</span>
-                    <div class="progress-bar"><div style="width: ${p(stats.consumed.calories, stats.targets.target_calories)}%"></div></div>
+                    <div class="progress-bar" style="background: var(--border-cozy); height: 12px; border-radius: 6px; overflow: hidden; margin-top: 5px;">
+                        <div style="width: ${p(stats.consumed.calories, stats.targets.target_calories)}%; background: #D96A4F; height: 100%; transition: width 0.3s ease;"></div>
+                    </div>
                 </div>
                 
                 <div class="nutrients-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px;">
-                    <div class="nutr-item" style="text-align: center; background: var(--border-cozy); padding: 10px; border-radius: 8px;">
+                    <div class="nutr-item" style="text-align: center; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border-cozy);">
                         <small>Белки</small><br>
                         <strong>${stats.consumed.proteins.toFixed(1)} / ${stats.targets.target_proteins}г</strong>
                     </div>
-                    <div class="nutr-item" style="text-align: center; background: var(--border-cozy); padding: 10px; border-radius: 8px;">
+                    <div class="nutr-item" style="text-align: center; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border-cozy);">
                         <small>Жиры</small><br>
                         <strong>${stats.consumed.fats.toFixed(1)} / ${stats.targets.target_fats}г</strong>
                     </div>
-                    <div class="nutr-item" style="text-align: center; background: var(--border-cozy); padding: 10px; border-radius: 8px;">
+                    <div class="nutr-item" style="text-align: center; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border-cozy);">
                         <small>Углеводы</small><br>
                         <strong>${stats.consumed.carbs.toFixed(1)} / ${stats.targets.target_carbs}г</strong>
                     </div>
@@ -242,40 +447,43 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     }
 
-    userTargetsForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        if (!currentUser) return;
-        const data = {
-            target_calories: parseFloat(document.getElementById("target-calories").value),
-            target_proteins: parseFloat(document.getElementById("target-proteins").value),
-            target_fats: parseFloat(document.getElementById("target-fats").value),
-            target_carbs: parseFloat(document.getElementById("target-carbs").value)
-        };
-        try {
-            await fetch(`/api/users/${currentUser.id}`, {
-                method: "PATCH",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify(data)
-            });
-            showToast("Цели обновлены! 💪");
-            fetchUserStats();
-        } catch (error) {
-            showToast("Ошибка при обновлении целей");
-        }
-    });
+    if (userTargetsForm) {
+        userTargetsForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+            const data = {
+                target_calories: parseFloat(document.getElementById("target-calories").value),
+                target_proteins: parseFloat(document.getElementById("target-proteins").value),
+                target_fats: parseFloat(document.getElementById("target-fats").value),
+                target_carbs: parseFloat(document.getElementById("target-carbs").value)
+            };
+            try {
+                await apiFetch(`/api/users/${currentUser.id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify(data)
+                });
+                showToast("Цели обновлены! 💪");
+                fetchUserStats();
+            } catch (error) {
+                showToast("Ошибка при обновлении целей");
+            }
+        });
+    }
 
     // --- Grocery List ---
-    generateGroceryBtn.addEventListener("click", async () => {
-        const start = groceryStartInput.value;
-        const end = groceryEndInput.value;
-        try {
-            const response = await fetch(`/api/grocery-list?start_date=${start}&end_date=${end}`);
-            const data = await response.json();
-            renderGroceryList(data.grocery_list);
-        } catch (error) {
-            showToast("Ошибка при генерации списка");
-        }
-    });
+    if (generateGroceryBtn) {
+        generateGroceryBtn.addEventListener("click", async () => {
+            const start = groceryStartInput.value;
+            const end = groceryEndInput.value;
+            try {
+                const response = await apiFetch(`/api/grocery-list?start_date=${start}&end_date=${end}`);
+                const data = await response.json();
+                renderGroceryList(data.grocery_list);
+            } catch (error) {
+                showToast("Ошибка при генерации списка");
+            }
+        });
+    }
 
     function renderGroceryList(items) {
         groceryItemsList.innerHTML = items.map(item => `
@@ -293,8 +501,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // API: Fetch Dishes
     async function fetchDishes() {
         try {
-            const includeArchived = showArchivedCheckbox.checked;
-            const response = await fetch(`/api/dishes?include_archived=${includeArchived}`);
+            const includeArchived = showArchivedCheckbox ? showArchivedCheckbox.checked : false;
+            const response = await apiFetch(`/api/dishes?include_archived=${includeArchived}`);
             dishes = await response.json();
             renderDishes();
         } catch (error) {
@@ -303,13 +511,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderDishes() {
+        if (!dishesContainer) return;
         dishesContainer.innerHTML = "";
         let filtered = currentCategory === "all" ? dishes : dishes.filter(d => d.category === currentCategory);
         
-        const searchQuery = menuSearchInput.value.toLowerCase().trim();
+        const searchQuery = menuSearchInput ? menuSearchInput.value.toLowerCase().trim() : "";
         if (searchQuery) {
             filtered = filtered.filter(d => d.name.toLowerCase().includes(searchQuery) || (d.ingredients && d.ingredients.toLowerCase().includes(searchQuery)));
         }
+
+        const sortMode = menuSortSelect ? menuSortSelect.value : "default";
+        if (sortMode === "time-asc") filtered.sort((a, b) => a.prep_time - b.prep_time);
+        else if (sortMode === "calories-asc") filtered.sort((a, b) => a.calories - b.calories);
+        else if (sortMode === "calories-desc") filtered.sort((a, b) => b.calories - a.calories);
+        else if (sortMode === "proteins-desc") filtered.sort((a, b) => b.proteins - a.proteins);
 
         filtered.forEach(dish => {
             const imgUrl = dish.image_url || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=500&auto=format&fit=crop&q=60";
@@ -346,6 +561,9 @@ document.addEventListener("DOMContentLoaded", () => {
         orderDishIdInput.value = dishId;
         orderDishNameInput.value = dishName;
         orderDateInput.value = getLocalDateString(1);
+        if (currentUser && orderBySelect) {
+            orderBySelect.value = currentUser.name;
+        }
         orderModal.classList.add("active");
     };
     
@@ -360,69 +578,74 @@ document.addEventListener("DOMContentLoaded", () => {
         const dish = dishes.find(d => d.id === dishId);
         editDishIdInput.value = dish.id;
         editDishNameInput.value = dish.name;
-        editDishCategorySelect.value = dish.category;
-        editDishTimeInput.value = dish.prep_time;
-        editDishDescTextarea.value = dish.description || "";
-        editDishRecipeTextarea.value = dish.recipe || "";
-        editDishIngredientsTextarea.value = dish.ingredients || "";
-        editDishImageHidden.value = dish.image_url || "";
-        editDishCaloriesInput.value = dish.calories;
-        editDishProteinsInput.value = dish.proteins;
-        editDishFatsInput.value = dish.fats;
-        editDishCarbsInput.value = dish.carbs;
+        if (editDishCategorySelect) editDishCategorySelect.value = dish.category;
+        if (editDishTimeInput) editDishTimeInput.value = dish.prep_time;
+        if (editDishDescTextarea) editDishDescTextarea.value = dish.description || "";
+        if (editDishRecipeTextarea) editDishRecipeTextarea.value = dish.recipe || "";
+        if (editDishIngredientsTextarea) editDishIngredientsTextarea.value = dish.ingredients || "";
+        if (editDishImageHidden) editDishImageHidden.value = dish.image_url || "";
+        if (editDishCaloriesInput) editDishCaloriesInput.value = dish.calories;
+        if (editDishProteinsInput) editDishProteinsInput.value = dish.proteins;
+        if (editDishFatsInput) editDishFatsInput.value = dish.fats;
+        if (editDishCarbsInput) editDishCarbsInput.value = dish.carbs;
         editDishModal.classList.add("active");
     };
 
     // Close Modals
-    document.getElementById("close-order-modal").onclick = () => orderModal.classList.remove("active");
-    document.getElementById("close-recipe-modal").onclick = () => recipeModal.classList.remove("active");
-    document.getElementById("close-edit-dish-modal").onclick = () => editDishModal.classList.remove("active");
+    if (closeOrderModalBtn) closeOrderModalBtn.onclick = () => orderModal.classList.remove("active");
+    if (closeRecipeModalBtn) closeRecipeModalBtn.onclick = () => recipeModal.classList.remove("active");
+    if (closeEditDishModalBtn) closeEditDishModalBtn.onclick = () => editDishModal.classList.remove("active");
 
     // Form Submissions
-    addDishForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const data = {
-            name: document.getElementById("dish-name").value,
-            description: document.getElementById("dish-desc").value,
-            recipe: document.getElementById("dish-recipe").value,
-            ingredients: document.getElementById("dish-ingredients").value,
-            category: document.getElementById("dish-category").value,
-            calories: parseFloat(document.getElementById("dish-calories").value) || 0,
-            proteins: parseFloat(document.getElementById("dish-proteins").value) || 0,
-            fats: parseFloat(document.getElementById("dish-fats").value) || 0,
-            carbs: parseFloat(document.getElementById("dish-carbs").value) || 0,
-            prep_time: parseInt(document.getElementById("dish-time").value) || 0,
-            image_url: document.getElementById("dish-image").value
-        };
-        await fetch("/api/dishes", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(data)});
-        addDishForm.reset();
-        showToast("Блюдо добавлено! 🥗");
-        navButtons[0].click();
-    });
+    if (addDishForm) {
+        addDishForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = {
+                name: document.getElementById("dish-name").value,
+                description: document.getElementById("dish-desc").value,
+                recipe: document.getElementById("dish-recipe").value,
+                ingredients: document.getElementById("dish-ingredients").value,
+                category: document.getElementById("dish-category").value,
+                calories: parseFloat(document.getElementById("dish-calories").value) || 0,
+                proteins: parseFloat(document.getElementById("dish-proteins").value) || 0,
+                fats: parseFloat(document.getElementById("dish-fats").value) || 0,
+                carbs: parseFloat(document.getElementById("dish-carbs").value) || 0,
+                prep_time: parseInt(document.getElementById("dish-time") ? document.getElementById("dish-time").value : 0) || 0,
+                image_url: document.getElementById("dish-image").value
+            };
+            await apiFetch("/api/dishes", { method: "POST", body: JSON.stringify(data)});
+            addDishForm.reset();
+            showToast("Блюдо добавлено! 🥗");
+            navButtons[0].click();
+        });
+    }
 
-    orderForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const data = {
-            dish_id: parseInt(orderDishIdInput.value),
-            user_id: currentUser ? currentUser.id : null,
-            ordered_by: document.getElementById("order-by").value,
-            order_for_date: orderDateInput.value,
-            order_for_time: document.getElementById("order-time").value,
-            note: document.getElementById("order-note").value
-        };
-        await fetch("/api/orders", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(data)});
-        orderModal.classList.remove("active");
-        showToast("Заказано! 🛒");
-    });
+    if (orderForm) {
+        orderForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = {
+                dish_id: parseInt(orderDishIdInput.value),
+                user_id: currentUser ? currentUser.id : null,
+                ordered_by: orderBySelect.value,
+                order_for_date: orderDateInput.value,
+                order_for_time: document.getElementById("order-time").value,
+                note: document.getElementById("order-note").value
+            };
+            await apiFetch("/api/orders", { method: "POST", body: JSON.stringify(data)});
+            orderModal.classList.remove("active");
+            showToast("Заказано! 🛒");
+        });
+    }
 
     // Orders Handling
     async function fetchOrders() {
-        const response = await fetch("/api/orders");
+        const response = await apiFetch("/api/orders");
         orders = await response.json();
         renderOrders();
     }
 
     function renderOrders() {
+        if (!pendingOrdersContainer) return;
         pendingOrdersContainer.innerHTML = "";
         acceptedOrdersContainer.innerHTML = "";
         completedOrdersContainer.innerHTML = "";
@@ -445,12 +668,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     window.updateStatus = async (id, status) => {
-        await fetch(`/api/orders/${id}/status`, { method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify({status})});
+        await apiFetch(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({status})});
         fetchOrders();
         if (status === 'completed') fetchUserStats();
     };
 
     // Initial load
+    checkAuth();
     fetchDishes();
     fetchUsers();
     fetchOrders();

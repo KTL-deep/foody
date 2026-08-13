@@ -22,10 +22,17 @@
                     <h1>Семейное <span>Кафе</span></h1>
                     <p>Наш уютный домашний ресторан</p>
                 </div>
-                <button id="theme-toggle" class="theme-toggle-btn" title="Переключить тему">
-                    <span class="theme-icon-sun">☀️</span>
-                    <span class="theme-icon-moon">🌙</span>
-                </button>
+                <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
+                    <div id="auth-user-badge" style="display: none; align-items: center; gap: 8px;">
+                        <span id="auth-user-name" style="font-weight: 600;">👤 Имя</span>
+                        <button id="logout-btn" class="btn-cozy" style="padding: 6px 12px; font-size: 0.85rem;" title="Выйти">🚪 Выйти</button>
+                    </div>
+                    <button id="open-auth-btn" class="btn-cozy" style="padding: 6px 12px; font-size: 0.85rem;">🔑 Войти</button>
+                    <button id="theme-toggle" class="theme-toggle-btn" title="Переключить тему">
+                        <span class="theme-icon-sun">☀️</span>
+                        <span class="theme-icon-moon">🌙</span>
+                    </button>
+                </div>
             </div>
             <nav>
                 <button class="nav-btn active" data-tab="menu-tab">📜 Меню</button>
@@ -302,6 +309,49 @@
                     <span id="edit-photo-status" style="margin-left: 10px; font-size: 0.85rem;">Без изменений</span>
                 </div>
                 <button type="submit" class="btn-submit">Сохранить</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ -->
+    <div class="modal" id="auth-modal">
+        <div class="modal-content" style="max-width: 420px;">
+            <button class="modal-close" id="close-auth-modal">&times;</button>
+            <div class="auth-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border-cozy); padding-bottom: 12px;">
+                <button type="button" class="btn-cozy active" id="auth-tab-login-btn" style="flex: 1;">Вход</button>
+                <button type="button" class="btn-cozy" id="auth-tab-register-btn" style="flex: 1;">Регистрация</button>
+            </div>
+
+            <!-- Форма входа -->
+            <form id="login-form">
+                <h3 style="margin-bottom: 15px;">🔑 Вход в профиль</h3>
+                <div class="form-group">
+                    <label class="form-label" for="login-name">Ваше имя *</label>
+                    <input class="form-input" type="text" id="login-name" required placeholder="Например: Кирилл">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="login-password">Пароль *</label>
+                    <input class="form-input" type="password" id="login-password" required placeholder="Ваш пароль">
+                </div>
+                <button type="submit" class="btn-submit" style="width: 100%; margin-top: 10px;">Войти</button>
+            </form>
+
+            <!-- Форма регистрации -->
+            <form id="register-form" style="display: none;">
+                <h3 style="margin-bottom: 15px;">📝 Регистрация нового профиля</h3>
+                <div class="form-group">
+                    <label class="form-label" for="register-name">Ваше имя *</label>
+                    <input class="form-input" type="text" id="register-name" required placeholder="Например: Маша">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="register-password">Пароль *</label>
+                    <input class="form-input" type="password" id="register-password" required placeholder="Минимум 4 символа">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="register-calories">Суточная цель по калориям (ккал)</label>
+                    <input class="form-input" type="number" id="register-calories" value="2000">
+                </div>
+                <button type="submit" class="btn-submit" style="width: 100%; margin-top: 10px;">Зарегистрироваться</button>
             </form>
         </div>
     </div>

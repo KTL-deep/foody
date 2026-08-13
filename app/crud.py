@@ -3,6 +3,8 @@ from sqlalchemy import func
 from app import models, schemas
 from datetime import date
 
+from app.auth import get_password_hash
+
 # --- Операции с Пользователями (Users CRUD) ---
 
 def get_user(db: Session, user_id: int):
@@ -15,7 +17,10 @@ def get_users(db: Session):
     return db.query(models.User).all()
 
 def create_user(db: Session, user: schemas.UserCreate):
-    db_user = models.User(**user.model_dump())
+    user_data = user.model_dump()
+    password = user_data.pop("password", None)
+    hashed_password = get_password_hash(password) if password else None
+    db_user = models.User(**user_data, hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -25,7 +30,12 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate):
     db_user = get_user(db, user_id)
     if not db_user:
         return None
-    for key, value in user_update.model_dump(exclude_unset=True).items():
+    update_data = user_update.model_dump(exclude_unset=True)
+    if "password" in update_data:
+        password = update_data.pop("password")
+        if password:
+            db_user.hashed_password = get_password_hash(password)
+    for key, value in update_data.items():
         setattr(db_user, key, value)
     db.commit()
     db.refresh(db_user)
