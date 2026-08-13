@@ -288,10 +288,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     fetchUsers();
                     fetchUserStats();
                 } else {
-                    showToast(data.detail || "Ошибка регистрации");
+                    let errMsg = "Ошибка регистрации";
+                    if (data && data.detail) {
+                        errMsg = typeof data.detail === "string" ? data.detail : (Array.isArray(data.detail) ? data.detail.map(d => d.msg).join(", ") : JSON.stringify(data.detail));
+                    }
+                    showToast(errMsg);
                 }
             } catch (err) {
-                showToast("Ошибка сети при регистрации");
+                console.error("Register Error:", err);
+                showToast("Ошибка при отправке данных");
             }
         });
     }
