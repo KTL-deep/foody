@@ -622,8 +622,20 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // --- Helper: Require Auth Check ---
+    function requireAuth(actionCallback) {
+        if (!currentUser) {
+            showToast("Для совершения этого действия необходимо войти 🔑");
+            if (authModal) authModal.classList.add("active");
+            return false;
+        }
+        if (actionCallback) actionCallback();
+        return true;
+    }
+
     // Modal Global Functions (added to window for onclick handlers)
     window.toggleArchiveDish = async (dishId, isArchived) => {
+        if (!requireAuth()) return;
         try {
             const response = await apiFetch(`/api/dishes/${dishId}/archive`, { method: "PATCH" });
             if (response.ok) {
@@ -636,6 +648,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.confirmDeleteDish = async (dishId, dishName) => {
+        if (!requireAuth()) return;
         if (confirm(`Вы действительно хотите безвозвратно удалить блюдо "${dishName}"?`)) {
             try {
                 const response = await apiFetch(`/api/dishes/${dishId}`, { method: "DELETE" });
@@ -648,7 +661,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     };
+
     window.openOrderModal = (dishId, dishName) => {
+        if (!requireAuth()) return;
         orderDishIdInput.value = dishId;
         orderDishNameInput.value = dishName;
         orderDateInput.value = getLocalDateString(1);
@@ -674,6 +689,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.openEditDishModal = (dishId) => {
+        if (!requireAuth()) return;
         const dish = dishes.find(d => d.id === dishId);
         editDishIdInput.value = dish.id;
         editDishNameInput.value = dish.name;
@@ -699,6 +715,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (addDishForm) {
         addDishForm.addEventListener("submit", async (e) => {
             e.preventDefault();
+            if (!requireAuth()) return;
             const data = {
                 name: document.getElementById("dish-name").value,
                 description: document.getElementById("dish-desc").value,
@@ -712,16 +729,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 prep_time: parseInt(document.getElementById("dish-time") ? document.getElementById("dish-time").value : 0) || 0,
                 image_url: document.getElementById("dish-image").value
             };
-            await apiFetch("/api/dishes", { method: "POST", body: JSON.stringify(data)});
-            addDishForm.reset();
-            showToast("Блюдо добавлено! 🥗");
-            navButtons[0].click();
+            const res = await apiFetch("/api/dishes", { method: "POST", body: JSON.stringify(data)});
+            if (res.ok) {
+                addDishForm.reset();
+                showToast("Блюдо добавлено! 🥗");
+                navButtons[0].click();
+            }
         });
     }
 
     if (orderForm) {
         orderForm.addEventListener("submit", async (e) => {
             e.preventDefault();
+            if (!requireAuth()) return;
             const data = {
                 dish_id: parseInt(orderDishIdInput.value),
                 user_id: currentUser ? currentUser.id : null,
@@ -730,9 +750,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 order_for_time: document.getElementById("order-time").value,
                 note: document.getElementById("order-note").value
             };
-            await apiFetch("/api/orders", { method: "POST", body: JSON.stringify(data)});
-            orderModal.classList.remove("active");
-            showToast("Заказано! 🛒");
+            const res = await apiFetch("/api/orders", { method: "POST", body: JSON.stringify(data)});
+            if (res.ok) {
+                orderModal.classList.remove("active");
+                showToast("Заказано! 🛒");
+            }
         });
     }
 
@@ -767,9 +789,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     window.updateStatus = async (id, status) => {
-        await apiFetch(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({status})});
-        fetchOrders();
-        if (status === 'completed') fetchUserStats();
+        if (!requireAuth()) return;
+        const res = await apiFetch(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({status})});
+        if (res.ok) {
+            fetchOrders();
+            if (status === 'completed') fetchUserStats();
+        }
     };
 
     // Initial load

@@ -219,6 +219,20 @@ def get_user_stats(
         "remaining": remaining
     }
 
+@app.patch("/api/users/{user_id}", response_model=schemas.User)
+def update_user(
+    user_id: int,
+    user_update: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_current_user)
+):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Вы можете редактировать только свои настройки")
+    user = crud.update_user(db, user_id=user_id, user_update=user_update)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
 # Блюда
 @app.get("/api/dishes", response_model=list[schemas.Dish])
 def read_dishes(category: Optional[str] = None, include_archived: bool = False, db: Session = Depends(get_db)):
@@ -227,18 +241,42 @@ def read_dishes(category: Optional[str] = None, include_archived: bool = False, 
     return crud.get_dishes(db, include_archived=include_archived)
 
 @app.post("/api/dishes", response_model=schemas.Dish)
-def create_dish(dish: schemas.DishCreate, db: Session = Depends(get_db)):
+def create_dish(
+    dish: schemas.DishCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_current_user)
+):
     return crud.create_dish(db=db, dish=dish)
 
+@app.patch("/api/dishes/{dish_id}", response_model=schemas.Dish)
+def update_dish(
+    dish_id: int,
+    dish_update: schemas.DishUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_current_user)
+):
+    dish = crud.update_dish(db, dish_id=dish_id, dish_update=dish_update)
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+    return dish
+
 @app.patch("/api/dishes/{dish_id}/archive", response_model=schemas.Dish)
-def toggle_archive_dish(dish_id: int, db: Session = Depends(get_db)):
+def toggle_archive_dish(
+    dish_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_current_user)
+):
     dish = crud.toggle_archive_dish(db, dish_id=dish_id)
     if not dish:
         raise HTTPException(status_code=404, detail="Dish not found")
     return dish
 
 @app.delete("/api/dishes/{dish_id}")
-def delete_dish(dish_id: int, db: Session = Depends(get_db)):
+def delete_dish(
+    dish_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_current_user)
+):
     success = crud.delete_dish(db, dish_id=dish_id)
     if not success:
         raise HTTPException(status_code=404, detail="Dish not found")
@@ -246,7 +284,10 @@ def delete_dish(dish_id: int, db: Session = Depends(get_db)):
 
 # Загрузка фото
 @app.post("/api/upload-photo")
-async def upload_photo(file: UploadFile = File(...)):
+async def upload_photo(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(require_current_user)
+):
     file_extension = file.filename.split(".")[-1]
     file_name = f"{uuid.uuid4()}.{file_extension}"
     
@@ -273,14 +314,23 @@ def read_orders(db: Session = Depends(get_db)):
     return crud.get_orders(db)
 
 @app.post("/api/orders", response_model=schemas.Order)
-def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
+def create_order(
+    order: schemas.OrderCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_current_user)
+):
     dish = crud.get_dish(db, dish_id=order.dish_id)
     if not dish:
         raise HTTPException(status_code=404, detail="Dish not found")
     return crud.create_order(db=db, order=order)
 
 @app.patch("/api/orders/{order_id}/status", response_model=schemas.Order)
-def update_order_status(order_id: int, status_update: schemas.OrderUpdate, db: Session = Depends(get_db)):
+def update_order_status(
+    order_id: int,
+    status_update: schemas.OrderUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_current_user)
+):
     db_order = crud.update_order_status(db=db, order_id=order_id, status=status_update.status)
     if db_order is None:
         raise HTTPException(status_code=404, detail="Order not found")
