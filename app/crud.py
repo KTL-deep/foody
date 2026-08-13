@@ -91,6 +91,70 @@ def update_dish(db: Session, dish_id: int, dish_update: schemas.DishUpdate):
     db.refresh(db_dish)
     return db_dish
 
+def delete_dish(db: Session, dish_id: int):
+    db_dish = get_dish(db, dish_id)
+    if not db_dish:
+        return False
+    # Удаляем также зависимые заказы или отвязываем
+    db.query(models.Order).filter(models.Order.dish_id == dish_id).delete(synchronize_session=False)
+    db.delete(db_dish)
+    db.commit()
+    return True
+
+def toggle_archive_dish(db: Session, dish_id: int):
+    db_dish = get_dish(db, dish_id)
+    if not db_dish:
+        return None
+    db_dish.is_archived = not db_dish.is_archived
+    db.commit()
+    db.refresh(db_dish)
+    return db_dish
+
+def get_user_period_stats(db: Session, user_id: int, period: str = "day", target_date: str = None):
+    if not target_date:
+        target_date = date.today().isoformat()
+    
+    query = db.query(models.Order).join(models.Dish).filter(
+        models.Order.user_id == user_id,
+        models.Order.status == "completed"
+    )
+
+    if period == "month":
+        year_month = target_date[:7] # YYYY-MM
+        query = query.filter(models.Order.order_for_date.like(f"{year_month}-%"))
+    elif period == "year":
+        year = target_date[:4] # YYYY
+        query = query.filter(models.Order.order_for_date.like(f"{year}-%"))
+    else: # day
+        query = query.filter(models.Order.order_for_date == target_date)
+    
+    completed_orders = query.all()
+    
+    totals = {
+        "calories": sum(o.dish.calories for o in completed_orders),
+        "proteins": sum(o.dish.proteins for o in completed_orders),
+        "fats": sum(o.dish.fats for o in completed_orders),
+        "carbs": sum(o.dish.carbs for o in completed_orders)
+    }
+
+    unique_dates = len(set(o.order_for_date for o in completed_orders)) or 1
+    
+    averages = {
+        "calories": round(totals["calories"] / unique_dates, 1),
+        "proteins": round(totals["proteins"] / unique_dates, 1),
+        "fats": round(totals["fats"] / unique_dates, 1),
+        "carbs": round(totals["carbs"] / unique_dates, 1)
+    }
+
+    return {
+        "period": period,
+        "date": target_date,
+        "orders_count": len(completed_orders),
+        "active_days_count": unique_dates if period != "day" else 1,
+        "totals": totals,
+        "averages": averages
+    }
+
 
 # --- Операции с Заказами (Orders CRUD) ---
 

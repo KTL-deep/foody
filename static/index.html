@@ -122,7 +122,19 @@
                     </select>
                 </div>
 
-                <div id="user-stats-container" style="margin-top: 20px;">
+                <div class="stats-period-selector" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px; background: var(--card-bg); padding: 15px 20px; border-radius: var(--radius-cozy); border: 1px solid var(--border-cozy); box-shadow: var(--shadow-cozy); flex-wrap: wrap;">
+                    <div class="period-tabs" style="display: flex; gap: 8px;">
+                        <button type="button" class="btn-cozy active" id="stats-period-day" data-period="day">📅 День</button>
+                        <button type="button" class="btn-cozy" id="stats-period-month" data-period="month">📆 Месяц</button>
+                        <button type="button" class="btn-cozy" id="stats-period-year" data-period="year">🗓 Год</button>
+                    </div>
+                    <div class="stats-date-picker" style="display: flex; align-items: center; gap: 8px;">
+                        <label for="stats-date-input" style="font-size: 0.85rem; color: var(--text-muted);">Дата:</label>
+                        <input class="form-input" type="date" id="stats-date-input" style="padding: 6px 12px; font-size: 0.85rem; width: auto;">
+                    </div>
+                </div>
+
+                <div id="user-stats-container" style="margin-top: 15px;">
                     <!-- Статистика через JS -->
                 </div>
 

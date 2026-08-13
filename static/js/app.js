@@ -402,10 +402,41 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    let statsPeriod = "day";
+    let statsDate = getLocalDateString(0);
+
+    const statsDateInput = document.getElementById("stats-date-input");
+    const statsPeriodDayBtn = document.getElementById("stats-period-day");
+    const statsPeriodMonthBtn = document.getElementById("stats-period-month");
+    const statsPeriodYearBtn = document.getElementById("stats-period-year");
+
+    if (statsDateInput) {
+        statsDateInput.value = statsDate;
+        statsDateInput.addEventListener("change", (e) => {
+            if (e.target.value) {
+                statsDate = e.target.value;
+                fetchUserStats();
+            }
+        });
+    }
+
+    function setStatsPeriod(period, btn) {
+        statsPeriod = period;
+        [statsPeriodDayBtn, statsPeriodMonthBtn, statsPeriodYearBtn].forEach(b => {
+            if (b) b.classList.remove("active");
+        });
+        if (btn) btn.classList.add("active");
+        fetchUserStats();
+    }
+
+    if (statsPeriodDayBtn) statsPeriodDayBtn.addEventListener("click", () => setStatsPeriod("day", statsPeriodDayBtn));
+    if (statsPeriodMonthBtn) statsPeriodMonthBtn.addEventListener("click", () => setStatsPeriod("month", statsPeriodMonthBtn));
+    if (statsPeriodYearBtn) statsPeriodYearBtn.addEventListener("click", () => setStatsPeriod("year", statsPeriodYearBtn));
+
     async function fetchUserStats() {
         if (!currentUser) return;
         try {
-            const response = await apiFetch(`/api/users/${currentUser.id}/stats`);
+            const response = await apiFetch(`/api/users/${currentUser.id}/stats?period=${statsPeriod}&target_date=${statsDate}`);
             const stats = await response.json();
             renderUserStats(stats);
             if (document.getElementById("target-calories")) {
@@ -422,32 +453,57 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderUserStats(stats) {
         if (!userStatsContainer) return;
         const p = (val, target) => Math.min(100, (val / target) * 100);
+
+        let periodTitle = "за выбранный день";
+        if (stats.period === "month") periodTitle = `за месяц (${stats.date ? stats.date.slice(0, 7) : ''})`;
+        else if (stats.period === "year") periodTitle = `за ${stats.date ? stats.date.slice(0, 4) : ''} год`;
+
+        let avgInfoHTML = "";
+        if (stats.period !== "day" && stats.averages) {
+            avgInfoHTML = `
+                <div style="margin-top: 15px; padding-top: 12px; border-top: 1px dashed var(--border-cozy); font-size: 0.85rem;">
+                    <p style="margin-bottom: 6px;">📈 <strong>Среднесуточные значения</strong> (за ${stats.active_days_count} активных дн.):</p>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; background: var(--bg-cozy); padding: 8px 12px; border-radius: 8px;">
+                        <span>Ккал: <strong>${Math.round(stats.averages.calories)}</strong></span>
+                        <span>Белки: <strong>${stats.averages.proteins}г</strong></span>
+                        <span>Жиры: <strong>${stats.averages.fats}г</strong></span>
+                        <span>Углеводы: <strong>${stats.averages.carbs}г</strong></span>
+                    </div>
+                </div>
+            `;
+        }
+
         userStatsContainer.innerHTML = `
             <div class="user-stats-card" style="background: var(--card-bg); padding: 20px; border-radius: var(--radius-cozy); border: 1px solid var(--border-cozy); box-shadow: var(--shadow-cozy);">
-                <h3>Привет, ${stats.user_name}! 🍳</h3>
-                <p>Твой прогресс за сегодня (по съеденным блюдам):</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <h3>Привет, ${stats.user_name}! 🍳</h3>
+                    <span style="font-size: 0.85rem; color: var(--text-muted); background: var(--bg-cozy); padding: 4px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border-cozy);">Заказов: ${stats.orders_count}</span>
+                </div>
+                <p style="margin-top: 5px; font-size: 0.9rem; color: var(--text-muted);">Статистика съеденного КБЖУ ${periodTitle}:</p>
                 
                 <div class="stat-row" style="margin-top: 15px;">
-                    <span>Калории: ${Math.round(stats.consumed.calories)} / ${stats.targets.target_calories} ккал</span>
+                    <span>Калории: ${Math.round(stats.consumed.calories)} ${stats.period === 'day' ? '/ ' + stats.targets.target_calories : ''} ккал</span>
                     <div class="progress-bar" style="background: var(--border-cozy); height: 12px; border-radius: 6px; overflow: hidden; margin-top: 5px;">
-                        <div style="width: ${p(stats.consumed.calories, stats.targets.target_calories)}%; background: #D96A4F; height: 100%; transition: width 0.3s ease;"></div>
+                        <div style="width: ${stats.period === 'day' ? p(stats.consumed.calories, stats.targets.target_calories) : p(stats.consumed.calories, stats.targets.target_calories * (stats.active_days_count || 1))}%; background: var(--accent-terracotta); height: 100%; transition: width 0.3s ease;"></div>
                     </div>
                 </div>
                 
                 <div class="nutrients-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px;">
-                    <div class="nutr-item" style="text-align: center; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border-cozy);">
+                    <div class="nutr-item" style="text-align: center; background: var(--bg-cozy); padding: 10px; border-radius: 8px; border: 1px solid var(--border-cozy);">
                         <small>Белки</small><br>
-                        <strong>${stats.consumed.proteins.toFixed(1)} / ${stats.targets.target_proteins}г</strong>
+                        <strong>${stats.consumed.proteins.toFixed(1)}г</strong>
                     </div>
-                    <div class="nutr-item" style="text-align: center; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border-cozy);">
+                    <div class="nutr-item" style="text-align: center; background: var(--bg-cozy); padding: 10px; border-radius: 8px; border: 1px solid var(--border-cozy);">
                         <small>Жиры</small><br>
-                        <strong>${stats.consumed.fats.toFixed(1)} / ${stats.targets.target_fats}г</strong>
+                        <strong>${stats.consumed.fats.toFixed(1)}г</strong>
                     </div>
-                    <div class="nutr-item" style="text-align: center; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border-cozy);">
+                    <div class="nutr-item" style="text-align: center; background: var(--bg-cozy); padding: 10px; border-radius: 8px; border: 1px solid var(--border-cozy);">
                         <small>Углеводы</small><br>
-                        <strong>${stats.consumed.carbs.toFixed(1)} / ${stats.targets.target_carbs}г</strong>
+                        <strong>${stats.consumed.carbs.toFixed(1)}г</strong>
                     </div>
                 </div>
+
+                ${avgInfoHTML}
             </div>
         `;
     }
@@ -539,8 +595,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="dish-img-container">
                     <img class="dish-img" src="${imgUrl}" alt="${dish.name}">
                     <span class="category-badge">${dish.category}</span>
-                    <div class="dish-admin-actions">
-                        <button class="btn-admin" onclick="openEditDishModal(${dish.id})">✏️</button>
+                    <div class="dish-admin-actions" style="display: flex; gap: 6px;">
+                        <button class="btn-admin" onclick="openEditDishModal(${dish.id})" title="Редактировать">✏️</button>
+                        <button class="btn-admin" onclick="toggleArchiveDish(${dish.id}, ${dish.is_archived})" title="${dish.is_archived ? 'Из архива' : 'В архив'}">${dish.is_archived ? '📤' : '📦'}</button>
+                        <button class="btn-admin" onclick="confirmDeleteDish(${dish.id}, '${dish.name.replace(/'/g, "\\'")}')" style="background: rgba(217, 106, 79, 0.2);" title="Удалить">🗑</button>
                     </div>
                 </div>
                 <div class="dish-info">
@@ -555,7 +613,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <span class="prep-time">🕒 ${dish.prep_time} мин</span>
                         <div class="dish-actions">
                             <button class="btn-secondary" onclick="openRecipeModal(${dish.id})">Рецепт</button>
-                            <button class="btn-primary" onclick="openOrderModal(${dish.id}, '${dish.name}')">Заказать</button>
+                            <button class="btn-primary" onclick="openOrderModal(${dish.id}, '${dish.name.replace(/'/g, "\\'")}')">Заказать</button>
                         </div>
                     </div>
                 </div>
@@ -565,6 +623,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Modal Global Functions (added to window for onclick handlers)
+    window.toggleArchiveDish = async (dishId, isArchived) => {
+        try {
+            const response = await apiFetch(`/api/dishes/${dishId}/archive`, { method: "PATCH" });
+            if (response.ok) {
+                showToast(isArchived ? "Блюдо возвращено из архива 📤" : "Блюдо перемещено в архив 📦");
+                fetchDishes();
+            }
+        } catch (e) {
+            showToast("Ошибка смены статуса архива");
+        }
+    };
+
+    window.confirmDeleteDish = async (dishId, dishName) => {
+        if (confirm(`Вы действительно хотите безвозвратно удалить блюдо "${dishName}"?`)) {
+            try {
+                const response = await apiFetch(`/api/dishes/${dishId}`, { method: "DELETE" });
+                if (response.ok) {
+                    showToast(`Блюдо "${dishName}" удалено 🗑`);
+                    fetchDishes();
+                }
+            } catch (e) {
+                showToast("Ошибка при удалении блюда");
+            }
+        }
+    };
     window.openOrderModal = (dishId, dishName) => {
         orderDishIdInput.value = dishId;
         orderDishNameInput.value = dishName;

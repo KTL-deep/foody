@@ -174,14 +174,21 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="User already exists")
     return crud.create_user(db=db, user=user)
 
-@app.get("/api/users/{user_id}/stats", response_model=schemas.UserStats)
-def get_user_stats(user_id: int, db: Session = Depends(get_db)):
+@app.get("/api/users/{user_id}/stats")
+def get_user_stats(
+    user_id: int,
+    period: str = "day",
+    target_date: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
     user = crud.get_user(db, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    today_str = date.today().isoformat()
-    consumed = crud.get_user_daily_stats(db, user_id=user_id, target_date=today_str)
+    if not target_date:
+        target_date = date.today().isoformat()
+
+    period_data = crud.get_user_period_stats(db, user_id=user_id, period=period, target_date=target_date)
     
     targets = {
         "name": user.name,
@@ -190,18 +197,25 @@ def get_user_stats(user_id: int, db: Session = Depends(get_db)):
         "target_fats": user.target_fats,
         "target_carbs": user.target_carbs
     }
+
+    consumed = period_data["totals"]
     
     remaining = {
-        "calories": max(0, user.target_calories - consumed["calories"]),
-        "proteins": max(0, user.target_proteins - consumed["proteins"]),
-        "fats": max(0, user.target_fats - consumed["fats"]),
-        "carbs": max(0, user.target_carbs - consumed["carbs"])
+        "calories": max(0.0, user.target_calories - consumed["calories"]),
+        "proteins": max(0.0, user.target_proteins - consumed["proteins"]),
+        "fats": max(0.0, user.target_fats - consumed["fats"]),
+        "carbs": max(0.0, user.target_carbs - consumed["carbs"])
     }
     
     return {
         "user_name": user.name,
+        "period": period,
+        "date": target_date,
+        "orders_count": period_data["orders_count"],
+        "active_days_count": period_data["active_days_count"],
         "targets": targets,
         "consumed": consumed,
+        "averages": period_data["averages"],
         "remaining": remaining
     }
 
@@ -215,6 +229,20 @@ def read_dishes(category: Optional[str] = None, include_archived: bool = False, 
 @app.post("/api/dishes", response_model=schemas.Dish)
 def create_dish(dish: schemas.DishCreate, db: Session = Depends(get_db)):
     return crud.create_dish(db=db, dish=dish)
+
+@app.patch("/api/dishes/{dish_id}/archive", response_model=schemas.Dish)
+def toggle_archive_dish(dish_id: int, db: Session = Depends(get_db)):
+    dish = crud.toggle_archive_dish(db, dish_id=dish_id)
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+    return dish
+
+@app.delete("/api/dishes/{dish_id}")
+def delete_dish(dish_id: int, db: Session = Depends(get_db)):
+    success = crud.delete_dish(db, dish_id=dish_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Dish not found")
+    return {"message": "Dish deleted successfully"}
 
 # Загрузка фото
 @app.post("/api/upload-photo")
