@@ -542,6 +542,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     <h3 class="dish-title">${dish.name}</h3>
                     <div class="kbju-tags">
                         <div class="kbju-tag"><span class="kbju-val">${dish.calories}</span><span class="kbju-lbl">ккал</span></div>
+                        <div class="kbju-tag"><span class="kbju-val">${dish.proteins}г</span><span class="kbju-lbl">белки</span></div>
+                        <div class="kbju-tag"><span class="kbju-val">${dish.fats}г</span><span class="kbju-lbl">жиры</span></div>
+                        <div class="kbju-tag"><span class="kbju-val">${dish.carbs}г</span><span class="kbju-lbl">углеводы</span></div>
                     </div>
                     <div class="dish-meta">
                         <span class="prep-time">🕒 ${dish.prep_time} мин</span>
@@ -570,6 +573,14 @@ document.addEventListener("DOMContentLoaded", () => {
     window.openRecipeModal = (dishId) => {
         const dish = dishes.find(d => d.id === dishId);
         recipeTitle.textContent = dish.name;
+        if (recipeKbju) {
+            recipeKbju.innerHTML = `
+                <div class="kbju-tag"><span class="kbju-val">${dish.calories}</span><span class="kbju-lbl">ккал</span></div>
+                <div class="kbju-tag"><span class="kbju-val">${dish.proteins}г</span><span class="kbju-lbl">белки</span></div>
+                <div class="kbju-tag"><span class="kbju-val">${dish.fats}г</span><span class="kbju-lbl">жиры</span></div>
+                <div class="kbju-tag"><span class="kbju-val">${dish.carbs}г</span><span class="kbju-lbl">углеводы</span></div>
+            `;
+        }
         recipeInstructions.textContent = dish.recipe || "Рецепт не указан.";
         recipeModal.classList.add("active");
     };
@@ -657,8 +668,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 <h4>${o.dish.name} (${o.ordered_by})</h4>
                 <p>${o.order_for_date} - ${o.order_for_time}</p>
                 <div class="order-actions">
-                    ${o.status === 'pending' ? `<button onclick="updateStatus(${o.id}, 'accepted')">Принять</button>` : ''}
-                    ${o.status === 'accepted' ? `<button onclick="updateStatus(${o.id}, 'completed')">Готово</button>` : ''}
+                    ${o.status === 'pending' ? `<button class="btn-cozy" onclick="updateStatus(${o.id}, 'accepted')">Принять 🍳</button>` : ''}
+                    ${o.status === 'accepted' ? `<button class="btn-primary" onclick="updateStatus(${o.id}, 'completed')">Готово ✅</button>` : ''}
                 </div>
             `;
             if (o.status === 'pending') pendingOrdersContainer.appendChild(card);

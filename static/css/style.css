@@ -59,6 +59,24 @@ a {
     text-decoration: none;
 }
 
+/* Все кнопки закругленные (Pill / Capsule) */
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.btn-primary,
+.btn-secondary,
+.btn-submit,
+.btn-cozy,
+.btn-admin,
+.nav-btn,
+.filter-btn,
+.theme-toggle-btn,
+.order-actions button,
+.auth-tabs button {
+    border-radius: var(--radius-pill) !important;
+}
+
 /* --- App Container --- */
 .container {
     width: 100%;
