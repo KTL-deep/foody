@@ -8,12 +8,6 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="apple-touch-icon" href="/static/favicon.png">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
 </head>
 <body>
     <div class="container">
@@ -77,10 +71,6 @@
                             <span id="auth-user-name" style="font-weight: 600;">👤 Имя</span>
                             <button id="logout-btn" class="btn-cozy" style="padding: 6px 12px; font-size: 0.85rem;" title="Выйти">🚪 Выйти</button>
                         </div>
-                        <button id="theme-toggle" class="theme-toggle-btn" title="Переключить тему">
-                            <span class="theme-icon-sun">☀️</span>
-                            <span class="theme-icon-moon">🌙</span>
-                        </button>
                     </div>
                 </div>
                 <nav>

@@ -46,8 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const filterButtons = document.querySelectorAll(".filter-btn");
     const dishesContainer = document.getElementById("dishes-container");
 
-    // Theme Toggle
-    const themeToggleBtn = document.getElementById("theme-toggle");
 
     // Auth Elements
     const openAuthBtn = document.getElementById("open-auth-btn");
@@ -147,13 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }, duration);
     }
 
-    // --- Theme Toggle ---
-    themeToggleBtn.addEventListener("click", () => {
-        const currentTheme = document.documentElement.getAttribute("data-theme") || "light";
-        const newTheme = currentTheme === "light" ? "dark" : "light";
-        document.documentElement.setAttribute("data-theme", newTheme);
-        localStorage.setItem("theme", newTheme);
-    });
 
     // Welcome Screen & Main App Elements
     const welcomeScreen = document.getElementById("welcome-screen");
