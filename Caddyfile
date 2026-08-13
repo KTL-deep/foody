@@ -1,0 +1,4 @@
+# Конфигурация Caddy с автоматическим HTTPS
+{$DOMAIN_NAME:localhost} {
+    reverse_proxy foody:8000
+}

@@ -5,14 +5,39 @@ services:
     build: .
     container_name: foody_app
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     volumes:
       - foody_data:/app/data
       - foody_uploads:/app/static/uploads
     environment:
       - DATABASE_URL=sqlite:////app/data/foody.db
+    networks:
+      - foody_network
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: foody_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - foody_network
+    depends_on:
+      - foody
+
+networks:
+  foody_network:
+    driver: bridge
 
 volumes:
   foody_data:
   foody_uploads:
+  caddy_data:
+  caddy_config:
