@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  foody:
+    build: .
+    container_name: foody_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - foody_data:/app/data
+      - foody_uploads:/app/static/uploads
+    environment:
+      - DATABASE_URL=sqlite:////app/data/foody.db
+
+volumes:
+  foody_data:
+  foody_uploads:

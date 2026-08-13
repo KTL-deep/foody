@@ -2,8 +2,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Имя файла базы данных SQLite в корне проекта
-SQLALCHEMY_DATABASE_URL = "sqlite:///./foody.db"
+import os
+
+# Ссылка на БД из переменных окружения или файл по умолчанию
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./foody.db")
 
 # engine с опцией connect_args для поддержки многопоточности SQLite в FastAPI
 engine = create_engine(
